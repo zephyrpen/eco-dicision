@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🌎 지속가능한 생태계 시뮬레이션</title>
+<style>
+  body {
+    font-family: 'Pretendard', sans-serif;
+    background: linear-gradient(120deg, #e8f5e9, #bbdefb);
+    color: #1b5e20;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  h1 { margin-bottom: 10px; }
+  p.intro { color:#2e7d32; font-size:1.1em; margin-bottom:30px; }
+  .status {
+    display: flex; justify-content:center; gap:15px; margin-bottom:25px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    background:#ffffffc0; border:2px solid #81c784; border-radius:12px;
+    padding:10px 20px; box-shadow:0 4px 8px rgba(0,0,0,0.1);
+    font-size:1.1em;
+  }
+  .scene {
+    background:#ffffffcc; border-radius:16px; padding:20px;
+    max-width:700px; margin:0 auto; box-shadow:0 4px 10px rgba(0,0,0,0.15);
+  }
+  .choices {
+    display:flex; flex-direction:column; gap:10px; margin-top:20px;
+  }
+  button {
+    background:#aed581; border:none; border-radius:10px; padding:12px;
+    font-size:1em; cursor:pointer; transition:0.2s;
+  }
+  button:hover { background:#81c784; transform:translateY(-2px); }
+  .message {
+    margin-top:25px; font-size:1.2em; font-weight:700; color:#2e7d32;
+  }
+</style>
+</head>
+<body>
+
+<h1>🌿 지속가능한 생태계 시뮬레이션</h1>
+<p class="intro">당신은 도시의 환경정책 담당자입니다.  
+5가지 결정을 내려 <b>환경·경제·사회</b>의 균형을 유지하세요.</p>
+
+<div class="status">
+  <div class="stat">🌳 환경: <span id="env">5</span></div>
+  <div class="stat">💰 경제: <span id="eco">5</span></div>
+  <div class="stat">👥 사회: <span id="soc">5</span></div>
+</div>
+
+<div class="scene">
+  <div id="eventText">시뮬레이션을 시작합니다.</div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<div class="message" id="message"></div>
+
+<script>
+let env=5, eco=5, soc=5, step=0;
+
+const events = [
+  {
+    text: "① 대기업이 도시에 공장을 세우고 싶다고 합니다.",
+    options: [
+      { text:"허가한다 (경제↑ 환경↓)", effect:{env:-2, eco:+2, soc:0} },
+      { text:"환경평가 후 제한적 허가 (균형)", effect:{env:-1, eco:+1, soc:0} },
+      { text:"허가하지 않는다 (환경↑ 경제↓)", effect:{env:+1, eco:-2, soc:-1} }
+    ]
+  },
+  {
+    text: "② 에너지 위기가 발생했습니다. 어떤 정책을 선택하겠습니까?",
+    options: [
+      { text:"석탄 발전 확대 (경제↑ 환경↓↓)", effect:{env:-3, eco:+2, soc:-1} },
+      { text:"태양광·풍력 투자 (환경↑ 경제↓)", effect:{env:+2, eco:-1, soc:+1} },
+      { text:"에너지 절약 캠페인 (사회참여↑)", effect:{env:+1, eco:0, soc:+2} }
+    ]
+  },
+  {
+    text: "③ 주거 지역 확장으로 산림이 줄고 있습니다.",
+    options: [
+      { text:"신규 택지개발 지속 (경제↑ 환경↓)", effect:{env:-2, eco:+1, soc:+1} },
+      { text:"도심 재개발로 전환", effect:{env:+1, eco:+1, soc:0} },
+      { text:"개발 중단, 녹지 보존", effect:{env:+2, eco:-1, soc:-1} }
+    ]
+  },
+  {
+    text: "④ 기후 이상으로 가뭄이 지속됩니다. 대응은?",
+    options: [
+      { text:"대규모 댐 건설 (경제↑ 환경↓)", effect:{env:-2, eco:+1, soc:+1} },
+      { text:"수자원 절약 정책 (사회참여↑)", effect:{env:+1, eco:0, soc:+2} },
+      { text:"인공강우 실험 (불확실)", effect:{env:0, eco:+1, soc:-1} }
+    ]
+  },
+  {
+    text: "⑤ 청년층의 일자리 부족 문제가 심각합니다.",
+    options: [
+      { text:"산업단지 확장 (경제↑ 환경↓)", effect:{env:-1, eco:+2, soc:+1} },
+      { text:"녹색산업 일자리 지원 (균형)", effect:{env:+1, eco:+1, soc:+1} },
+      { text:"공공복지 중심 정책 (경제↓ 사회↑)", effect:{env:0, eco:-1, soc:+2} }
+    ]
+  },
+  { text:"결과", options:[] }
+];
+
+function updateStatus(){
+  document.getElementById('env').textContent = env;
+  document.getElementById('eco').textContent = eco;
+  document.getElementById('soc').textContent = soc;
+}
+
+function loadEvent(){
+  if(step>=events.length-1){ endGame(); return; }
+  const ev = events[step];
+  document.getElementById('eventText').textContent = ev.text;
+  const choices = document.getElementById('choices');
+  choices.innerHTML='';
+  ev.options.forEach(opt=>{
+    const b=document.createElement('button');
+    b.textContent=opt.text;
+    b.onclick=()=>applyChoice(opt.effect);
+    choices.appendChild(b);
+  });
+}
+
+function applyChoice(eff){
+  env+=eff.env; eco+=eff.eco; soc+=eff.soc;
+  env=Math.max(0,Math.min(10,env));
+  eco=Math.max(0,Math.min(10,eco));
+  soc=Math.max(0,Math.min(10,soc));
+  updateStatus();
+  step++;
+  loadEvent();
+}
+
+function endGame(){
+  document.getElementById('choices').innerHTML='';
+  let sustainability = Math.round((env+eco+soc)/3);
+  let msg = '';
+  if(sustainability>=8) msg="🌿 훌륭합니다! 환경과 경제가 조화를 이루는 지속가능한 사회를 달성했습니다.";
+  else if(sustainability>=6) msg="🙂 괜찮아요. 약간의 불균형이 있지만 안정적인 발전을 유지했습니다.";
+  else if(sustainability>=4) msg="⚠️ 불균형이 커지고 있습니다. 환경·경제 중 한쪽이 과도하게 희생되었습니다.";
+  else msg="💀 생태적·사회적 위기입니다. 지속가능성이 붕괴되었습니다.";
+  document.getElementById('eventText').textContent = "🌏 정책 결과 요약";
+  document.getElementById('message').textContent = msg;
+}
+
+updateStatus();
+loadEvent();
+</script>
+</body>
+</html>
